@@ -9,5 +9,3 @@ spec:
       port: 
         - containerport: 80
           protocal: "tcp"
-
-  
