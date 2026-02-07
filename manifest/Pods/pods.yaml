@@ -1,11 +1,10 @@
 apiVersion: v1
-kind: pod
+kind: Pod
 metadata:
-  name: httpd-pod
+  name: nginx-pod
 spec:
-  containers: 
-    - name: httpd
-      image: httpd:2.4
-      port: 
-        - containerport: 80
-          protocal: "tcp"
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
