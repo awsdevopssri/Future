@@ -118,7 +118,6 @@ pipeline {
 
         success {
 
-            echo "=================================="
             echo " BUILD SUCCESSFUL "
             echo " Application ${env.APP_NAME} built successfully"
             echo " Environment: ${params.ENVIRONMENT}"
