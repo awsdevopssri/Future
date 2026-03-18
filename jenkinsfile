@@ -3,12 +3,17 @@ pipeline {
     agent any
 
     triggers {
-
         githubPush()
-
         pollSCM('H/5 * * * *')
-
         cron('0 10 * * *')
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        timestamps()
+        skipDefaultCheckout()
+        retry(2)
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     parameters {
@@ -51,25 +56,42 @@ pipeline {
     }
 
     environment {
-
         JAVA_HOME = "/usr/lib/jvm/java-21-openjdk-amd64"
         MAVEN_HOME = "/usr/share/maven"
-
         PATH = "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${env.PATH}"
-
         APP_NAME = "java-devops-app"
     }
 
     stages {
 
-        stage('Checkout Code') {
-
+        stage('Prepare Workspace') {
             steps {
+                echo "Cleaning workspace before build"
+                cleanWs()
+            }
+        }
 
+        stage('Checkout Code') {
+            steps {
                 echo "Cloning repository from ${params.GIT_REPO}"
-
                 git branch: "${params.BRANCH}",
                     url: "${params.GIT_REPO}"
+            }
+        }
+
+        stage('Build Information') {
+            steps {
+
+                echo "==================================="
+
+                echo "Build Number: ${env.BUILD_NUMBER}"
+                echo "Git Branch: ${params.BRANCH}"
+                echo "Repository: ${params.GIT_REPO}"
+                echo "Environment: ${params.ENVIRONMENT}"
+
+                echo "==================================="
+
+                sh 'git log -1 --oneline'
             }
         }
 
@@ -77,8 +99,13 @@ pipeline {
 
             steps {
 
-                sh 'java -version'
-                sh 'mvn -version'
+                sh '''
+                echo "Checking Java"
+                java -version
+
+                echo "Checking Maven"
+                mvn -version
+                '''
             }
         }
 
@@ -89,6 +116,18 @@ pipeline {
                 echo "Running Maven Goal: ${params.MAVEN_GOAL}"
 
                 sh "mvn ${params.MAVEN_GOAL}"
+            }
+        }
+
+        stage('Run Tests') {
+
+            steps {
+
+                echo "Running Maven tests"
+
+                sh 'mvn test'
+
+                junit 'target/surefire-reports/*.xml'
             }
         }
 
@@ -104,12 +143,21 @@ pipeline {
             }
         }
 
+        stage('Verify Artifact') {
+
+            steps {
+
+                echo "Verifying generated JAR file"
+
+                sh 'ls -lh target/'
+            }
+        }
+
         stage('Archive Artifacts') {
 
             steps {
 
-                archiveArtifacts artifacts: 'target/*.jar',
-                fingerprint: true
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
     }
@@ -118,6 +166,7 @@ pipeline {
 
         success {
 
+            echo "=================================="
             echo " BUILD SUCCESSFUL "
             echo " Application ${env.APP_NAME} built successfully"
             echo " Environment: ${params.ENVIRONMENT}"
@@ -142,6 +191,10 @@ pipeline {
         }
 
         always {
+
+            echo "Cleaning temporary files"
+
+            cleanWs()
 
             echo "Pipeline execution completed"
         }
