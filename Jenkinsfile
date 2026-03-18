@@ -130,16 +130,15 @@ pipeline {
                 junit 'target/surefire-reports/*.xml'
             }
         }
-
         stage('Run Java Application') {
-
             steps {
-
-                echo "Running Java class ${params.MAIN_CLASS}"
-
-                sh """
-                java -cp target/*.jar ${params.MAIN_CLASS}
-                """
+                script {
+                    if (fileExists('target')) {
+                        sh "java -cp target/*.jar ${params.MAIN_CLASS}"
+                    } else {
+                        echo "No JAR file found, skipping run stage"
+                    }
+                }
             }
         }
 
