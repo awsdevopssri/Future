@@ -56,9 +56,6 @@ pipeline {
     }
 
     environment {
-        JAVA_HOME = "/usr/lib/jvm/java-21-openjdk-amd64"
-        MAVEN_HOME = "/usr/share/maven"
-        PATH = "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${env.PATH}"
         APP_NAME = "java-devops-app"
     }
 
@@ -74,6 +71,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 echo "Cloning repository from ${params.GIT_REPO}"
+
                 git branch: "${params.BRANCH}",
                     url: "${params.GIT_REPO}"
             }
@@ -91,7 +89,7 @@ pipeline {
 
                 echo "==================================="
 
-                sh 'git log -1 --oneline'
+                bat 'git log -1 --oneline'
             }
         }
 
@@ -99,11 +97,11 @@ pipeline {
 
             steps {
 
-                sh '''
-                echo "Checking Java"
+                bat '''
+                echo Checking Java
                 java -version
 
-                echo "Checking Maven"
+                echo Checking Maven
                 mvn -version
                 '''
             }
@@ -115,7 +113,7 @@ pipeline {
 
                 echo "Running Maven Goal: ${params.MAVEN_GOAL}"
 
-                sh "mvn ${params.MAVEN_GOAL}"
+                bat "mvn ${params.MAVEN_GOAL}"
             }
         }
 
@@ -125,17 +123,26 @@ pipeline {
 
                 echo "Running Maven tests"
 
-                sh 'mvn test'
+                bat 'mvn test'
 
                 junit 'target/surefire-reports/*.xml'
             }
         }
+
         stage('Run Java Application') {
+
             steps {
+
                 script {
+
                     if (fileExists('target')) {
-                        sh "java -cp target/*.jar ${params.MAIN_CLASS}"
+
+                        echo "Running Java Application"
+
+                        bat "java -cp target\\*.jar ${params.MAIN_CLASS}"
+
                     } else {
+
                         echo "No JAR file found, skipping run stage"
                     }
                 }
@@ -148,7 +155,7 @@ pipeline {
 
                 echo "Verifying generated JAR file"
 
-                sh 'ls -lh target/'
+                bat 'dir target'
             }
         }
 
