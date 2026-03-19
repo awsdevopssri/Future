@@ -24,6 +24,25 @@ pipeline {
 
     stages {
 
+        stage('Install Python (if not exists)') {
+            steps {
+                bat '''
+                python --version >nul 2>&1
+                IF %ERRORLEVEL% NEQ 0 (
+                    echo Python not found. Installing...
+
+                    powershell -Command "Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe -OutFile python-installer.exe"
+
+                    python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+
+                    echo Python Installed
+                ) ELSE (
+                    echo Python already installed
+                )
+                '''
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 cleanWs()
@@ -39,6 +58,7 @@ pipeline {
                 python --version
 
                 echo Checking pip
+                python -m ensurepip
                 python -m pip --version
                 '''
             }
@@ -71,8 +91,8 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    if (fileExists('tests')) {
-                        bat "python -m pytest || exit 0"
+                    if (fileExists('test_app.py')) {
+                        bat "python -m unittest test_app.py"
                     } else {
                         echo "No tests found → Skipping"
                     }
@@ -94,8 +114,6 @@ pipeline {
             echo "=================================="
             echo "❌ BUILD FAILED → DESTROYING EVERYTHING"
             echo "=================================="
-
-            // Cleanup EVERYTHING
             deleteDir()
         }
 
