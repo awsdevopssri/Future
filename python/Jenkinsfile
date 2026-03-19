@@ -6,7 +6,7 @@ pipeline {
     }
 
     options {
-        retry(2)
+        retry(2)                          // retry build 2 times if failure
         timeout(time: 10, unit: 'MINUTES')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
@@ -20,35 +20,39 @@ pipeline {
             }
         }
 
-        stage('Check Node.js') {
+        stage('Check Python') {
             steps {
                 bat '''
-                echo Checking Node.js...
+                echo Checking Python availability...
 
-                node --version
+                python --version
                 IF %ERRORLEVEL% NEQ 0 (
-                    echo Node.js not found! Please install Node.js and add to PATH
-                    exit /b 1
-                )
-
-                npm --version
-                IF %ERRORLEVEL% NEQ 0 (
-                    echo npm not found!
+                    echo Python not found! Please install Python and add to PATH
                     exit /b 1
                 )
                 '''
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Setup Python Env') {
             steps {
                 bat '''
-                echo Installing dependencies...
+                echo Checking venv module...
 
-                IF exist package.json (
-                    npm install
+                python -m venv venv
+                IF %ERRORLEVEL% NEQ 0 (
+                    echo venv not available, running without virtual environment...
+                    exit /b 0
+                )
+
+                echo Activating virtual environment and installing dependencies...
+
+                venv\\Scripts\\python -m pip install --upgrade pip
+
+                IF exist requirements.txt (
+                    venv\\Scripts\\python -m pip install -r requirements.txt
                 ) ELSE (
-                    echo No package.json found → Skipping install
+                    echo No requirements.txt found
                 )
                 '''
             }
@@ -57,12 +61,10 @@ pipeline {
         stage('Run Application') {
             steps {
                 bat '''
-                echo Running Node.js app...
-
-                IF exist app.js (
-                    node app.js
+                IF exist venv (
+                    venv\\Scripts\\python app.py
                 ) ELSE (
-                    echo app.js not found → Skipping run
+                    python app.py
                 )
                 '''
             }
@@ -71,12 +73,10 @@ pipeline {
         stage('Run Tests') {
             steps {
                 bat '''
-                echo Running tests...
-
-                IF exist package.json (
-                    npm test
+                IF exist venv (
+                    venv\\Scripts\\python -m unittest discover
                 ) ELSE (
-                    echo No tests configured
+                    python -m unittest discover
                 )
                 '''
             }
