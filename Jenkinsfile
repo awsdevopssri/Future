@@ -14,8 +14,9 @@ pipeline {
     }
 
     parameters {
-        string(name: 'GIT_REPO') 
-		defaultValue: 'https://github.com/awsdevopssri/Future.git')
+        string(name: 'GIT_REPO',
+		defaultValue: 'https://github.com/awsdevopssri/Future.git',
+        description: 'GitHub Repository URL')
         string(name: 'BRANCH', defaultValue: 'feature-ep2-task-1')
     }
 
