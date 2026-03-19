@@ -1,58 +1,65 @@
 pipeline {
     agent any
 
-    triggers {
-        pollSCM('H/2 * * * *')   // check repo every 2 minutes
+    options {
+        disableConcurrentBuilds()
+        timestamps()
     }
 
-    options {
-        retry(2)                          // retry build 2 times if failure
-        timeout(time: 10, unit: 'MINUTES')
-        disableConcurrentBuilds()
-        buildDiscarder(logRotator(numToKeepStr: '10'))
+    triggers {
+        pollSCM('H/2 * * * *')   // checks every 2 minutes
+    }
+
+    environment {
+        GIT_REPO = 'https://github.com/awsdevopssri/Future.git'
+        GIT_BRANCH = 'feature-ep2-task-1'
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: "${GIT_BRANCH}", url: "${GIT_REPO}"
             }
         }
 
         stage('Check Python') {
             steps {
                 bat '''
-                echo Checking Python availability...
+                echo Checking Python installation...
 
-                python --version
-                IF %ERRORLEVEL% NEQ 0 (
+                where python
+                if %ERRORLEVEL% NEQ 0 (
                     echo Python not found! Please install Python and add to PATH
                     exit /b 1
                 )
+
+                python --version
                 '''
             }
         }
 
-        stage('Setup Python Env') {
+        stage('Setup Virtual Env (if possible)') {
             steps {
                 bat '''
-                echo Checking venv module...
+                echo Trying to create virtual environment...
 
                 python -m venv venv
-                IF %ERRORLEVEL% NEQ 0 (
-                    echo venv not available, running without virtual environment...
-                    exit /b 0
-                )
 
-                echo Activating virtual environment and installing dependencies...
+                IF EXIST venv (
+                    echo Virtual environment created successfully
 
-                venv\\Scripts\\python -m pip install --upgrade pip
+                    call venv\\Scripts\\activate
 
-                IF exist requirements.txt (
-                    venv\\Scripts\\python -m pip install -r requirements.txt
+                    python -m pip install --upgrade pip
+
+                    if exist requirements.txt (
+                        pip install -r requirements.txt
+                    ) else (
+                        echo No requirements.txt found
+                    )
                 ) ELSE (
-                    echo No requirements.txt found
+                    echo venv not available → using system Python
                 )
                 '''
             }
@@ -61,11 +68,10 @@ pipeline {
         stage('Run Application') {
             steps {
                 bat '''
-                IF exist venv (
-                    venv\\Scripts\\python app.py
-                ) ELSE (
-                    python app.py
+                IF EXIST venv (
+                    call venv\\Scripts\\activate
                 )
+                python app.py
                 '''
             }
         }
@@ -73,11 +79,10 @@ pipeline {
         stage('Run Tests') {
             steps {
                 bat '''
-                IF exist venv (
-                    venv\\Scripts\\python -m unittest discover
-                ) ELSE (
-                    python -m unittest discover
+                IF EXIST venv (
+                    call venv\\Scripts\\activate
                 )
+                python -m unittest discover
                 '''
             }
         }
@@ -89,9 +94,6 @@ pipeline {
         }
         failure {
             echo '❌ Build FAILED'
-        }
-        always {
-            echo '📦 Cleaning workspace...'
         }
     }
 }

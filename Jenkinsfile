@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     triggers {
-        pollSCM('H/2 * * * *')   // check repo every 2 minutes
+        pollSCM('H/2 * * * *')   // Poll every 2 minutes
     }
 
     options {
@@ -12,11 +12,17 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
+    environment {
+        NODE_ENV = 'development'
+        BRANCH_NAME = 'feature-ep2-task-1'   // change if needed
+        REPO_URL = 'https://github.com/awsdevopssri/Future.git'
+    }
+
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: "${BRANCH_NAME}", url: "${REPO_URL}"
             }
         }
 
@@ -24,7 +30,6 @@ pipeline {
             steps {
                 bat '''
                 echo Checking Node.js...
-
                 node --version
                 IF %ERRORLEVEL% NEQ 0 (
                     echo Node.js not found! Please install Node.js and add to PATH
@@ -32,10 +37,6 @@ pipeline {
                 )
 
                 npm --version
-                IF %ERRORLEVEL% NEQ 0 (
-                    echo npm not found!
-                    exit /b 1
-                )
                 '''
             }
         }
@@ -43,9 +44,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 bat '''
-                echo Installing dependencies...
-
                 IF exist package.json (
+                    echo Installing dependencies...
                     npm install
                 ) ELSE (
                     echo No package.json found → Skipping install
@@ -57,12 +57,10 @@ pipeline {
         stage('Run Application') {
             steps {
                 bat '''
-                echo Running Node.js app...
-
                 IF exist app.js (
                     node app.js
                 ) ELSE (
-                    echo app.js not found → Skipping run
+                    echo No app.js found
                 )
                 '''
             }
@@ -71,9 +69,8 @@ pipeline {
         stage('Run Tests') {
             steps {
                 bat '''
-                echo Running tests...
-
                 IF exist package.json (
+                    echo Running tests...
                     npm test
                 ) ELSE (
                     echo No tests configured
@@ -85,13 +82,13 @@ pipeline {
 
     post {
         success {
-            echo '✅ Build SUCCESS'
+            echo '✅ Node.js Build SUCCESS'
         }
         failure {
-            echo '❌ Build FAILED'
+            echo '❌ Node.js Build FAILED'
         }
         always {
-            echo '📦 Cleaning workspace...'
+            echo '📦 Cleanup complete'
         }
     }
 }
