@@ -5,13 +5,11 @@ pipeline {
     triggers {
         githubPush()
         pollSCM('H/2 * * * *')
-        cron('0 10 * * *')
     }
 
     options {
         timeout(time: 30, unit: 'MINUTES')
         timestamps()
-        skipDefaultCheckout()
         retry(2)
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
@@ -26,7 +24,7 @@ pipeline {
 
         string(
             name: 'BRANCH',
-            defaultValue: 'main',
+            defaultValue: 'feature-ep2-task-1',
             description: 'Git Branch'
         )
 
@@ -42,12 +40,6 @@ pipeline {
             description: 'Maven Build Goal'
         )
 
-        choice(
-            name: 'ENVIRONMENT',
-            choices: ['dev','qa','prod'],
-            description: 'Deployment Environment'
-        )
-
         booleanParam(
             name: 'CLEAN_ON_FAIL',
             defaultValue: true,
@@ -61,32 +53,30 @@ pipeline {
 
     stages {
 
-        stage('Prepare Workspace') {
-            steps {
-                echo "Cleaning workspace before build"
-                cleanWs()
-            }
-        }
-
         stage('Checkout Code') {
             steps {
-                echo "Cloning repository from ${params.GIT_REPO}"
 
-                git branch: "${params.BRANCH}",
-                    url: "${params.GIT_REPO}"
+                script {
+                    if (fileExists('.git')) {
+                        echo "Repository already exists → Pulling latest code"
+
+                        bat "git pull origin ${params.BRANCH}"
+                    } else {
+                        echo "Cloning fresh repository"
+
+                        git branch: "*/${params.BRANCH}",
+                            url: "${params.GIT_REPO}"
+                    }
+                }
             }
         }
 
-        stage('Build Information') {
+        stage('Build Info') {
             steps {
 
                 echo "==================================="
-
                 echo "Build Number: ${env.BUILD_NUMBER}"
-                echo "Git Branch: ${params.BRANCH}"
-                echo "Repository: ${params.GIT_REPO}"
-                echo "Environment: ${params.ENVIRONMENT}"
-
+                echo "Branch: ${params.BRANCH}"
                 echo "==================================="
 
                 bat 'git log -1 --oneline'
@@ -94,9 +84,7 @@ pipeline {
         }
 
         stage('Verify Tools') {
-
             steps {
-
                 bat '''
                 echo Checking Java
                 java -version
@@ -108,61 +96,46 @@ pipeline {
         }
 
         stage('Build Application') {
-
             steps {
-
-                echo "Running Maven Goal: ${params.MAVEN_GOAL}"
+                echo "Running Maven Build"
 
                 bat "mvn ${params.MAVEN_GOAL}"
             }
         }
 
         stage('Run Tests') {
-
             steps {
 
-                echo "Running Maven tests"
-
                 bat 'mvn test'
-
-                junit 'target/surefire-reports/*.xml'
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true,
+                          testResults: 'target/surefire-reports/*.xml'
+                }
             }
         }
 
-        stage('Run Java Application') {
-
+        stage('Run Application') {
             steps {
-
                 script {
 
                     if (fileExists('target')) {
 
-                        echo "Running Java Application"
+                        echo "Running Application"
 
                         bat "java -cp target\\*.jar ${params.MAIN_CLASS}"
 
                     } else {
 
-                        echo "No JAR file found, skipping run stage"
+                        echo "No JAR found, skipping run"
                     }
                 }
             }
         }
 
-        stage('Verify Artifact') {
-
-            steps {
-
-                echo "Verifying generated JAR file"
-
-                bat 'dir target'
-            }
-        }
-
         stage('Archive Artifacts') {
-
             steps {
-
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
@@ -171,37 +144,25 @@ pipeline {
     post {
 
         success {
-
             echo "=================================="
             echo " BUILD SUCCESSFUL "
-            echo " Application ${env.APP_NAME} built successfully"
-            echo " Environment: ${params.ENVIRONMENT}"
+            echo " ${env.APP_NAME} executed successfully"
             echo "=================================="
         }
 
         failure {
-
             echo "=================================="
-            echo " BUILD FAILED "
+            echo " BUILD FAILED → CLEANING EVERYTHING "
             echo "=================================="
 
             script {
-
-                if(params.CLEAN_ON_FAIL == true) {
-
-                    echo "Cleaning workspace due to failure"
-
+                if (params.CLEAN_ON_FAIL) {
                     deleteDir()
                 }
             }
         }
 
         always {
-
-            echo "Cleaning temporary files"
-
-            cleanWs()
-
             echo "Pipeline execution completed"
         }
     }
