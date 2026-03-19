@@ -1,0 +1,10 @@
+stage('Setup Virtual Env') {
+    steps {
+        bat '''
+        python -m venv venv
+        call venv\\Scripts\\activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        '''
+    }
+}
