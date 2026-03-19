@@ -9,31 +9,16 @@ pipeline {
 
     stages {
 
-        stage('Install Python if missing') {
+        stage('Verify Correct Python') {
             steps {
                 bat '''
-                python --version >nul 2>&1
-                IF %ERRORLEVEL% NEQ 0 (
-                    echo Installing Python...
-
-                    powershell -Command "Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe -OutFile python-installer.exe"
-
-                    python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
-
-                    echo Python Installed
-                ) ELSE (
-                    echo Python already installed
-                )
-                '''
-            }
-        }
-
-        stage('Verify Python') {
-            steps {
-                bat '''
+                echo Checking Python Path
                 where python
+
+                echo Version
                 python --version
 
+                echo Checking pip
                 python -m pip --version
                 '''
             }
@@ -42,8 +27,8 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 cleanWs()
-                git branch: "${params.BRANCH}",
-                    url: "${params.GIT_REPO}"
+                git branch: "feature-ep2-task-1",
+                    url: "https://github.com/awsdevopssri/Future.git"
             }
         }
 
