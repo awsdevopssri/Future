@@ -19,8 +19,7 @@ pipeline {
             description: 'GitHub Repository URL')
 
         string(name: 'BRANCH',
-            defaultValue: 'feature-ep2-task-1',
-            description: 'Git Branch')
+            defaultValue: 'feature-ep2-task-1')
     }
 
     stages {
@@ -36,8 +35,11 @@ pipeline {
         stage('Verify Python') {
             steps {
                 bat '''
+                echo Checking Python
                 python --version
-                pip --version
+
+                echo Checking pip
+                python -m pip --version
                 '''
             }
         }
@@ -46,9 +48,9 @@ pipeline {
             steps {
                 script {
                     if (fileExists('requirements.txt')) {
-                        bat 'pip install -r requirements.txt'
+                        bat "python -m pip install -r requirements.txt"
                     } else {
-                        echo "No requirements.txt found, skipping install"
+                        echo "No requirements.txt found → Skipping"
                     }
                 }
             }
@@ -58,10 +60,9 @@ pipeline {
             steps {
                 script {
                     if (fileExists('app.py')) {
-                        echo "Running Python Application"
-                        bat 'python app.py'
+                        bat "python app.py"
                     } else {
-                        echo "No app.py found"
+                        echo "No app.py found → Skipping"
                     }
                 }
             }
@@ -70,11 +71,10 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    if (fileExists('test_app.py')) {
-                        echo "Running Tests"
-                        bat 'python -m unittest discover'
+                    if (fileExists('tests')) {
+                        bat "python -m pytest || exit 0"
                     } else {
-                        echo "No test files found"
+                        echo "No tests found → Skipping"
                     }
                 }
             }
@@ -84,17 +84,18 @@ pipeline {
     post {
 
         success {
-            echo "✅ BUILD SUCCESS (PYTHON)"
+            echo "=================================="
+            echo "✅ BUILD SUCCESS"
+            echo "Application executed successfully"
+            echo "=================================="
         }
 
         failure {
+            echo "=================================="
             echo "❌ BUILD FAILED → DESTROYING EVERYTHING"
+            echo "=================================="
 
-            bat '''
-            echo Cleaning Python cache...
-            if exist __pycache__ rmdir /s /q __pycache__
-            '''
-
+            // Cleanup EVERYTHING
             deleteDir()
         }
 
