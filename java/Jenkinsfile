@@ -24,7 +24,6 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                cleanWs()
                 git branch: "${params.BRANCH}",
                     url: "${params.GIT_REPO}"
             }
