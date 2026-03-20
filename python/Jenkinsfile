@@ -15,6 +15,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
+                cleanWs()
                 git branch: 'feature-ep2-task-1',
                     url: 'https://github.com/awsdevopssri/Future.git'
             }
@@ -38,7 +39,11 @@ pipeline {
                     bat '''
                     echo Trying venv...
 
-                    python -m venv venv || echo venv not supported, continuing...
+                    python -m venv venv
+                    IF %ERRORLEVEL% NEQ 0 (
+                        echo venv not supported, continuing...
+                        exit /b 0
+                    )
 
                     IF EXIST venv (
                         echo Using virtual environment
