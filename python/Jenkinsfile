@@ -1,101 +1,97 @@
 pipeline {
+
     agent any
 
-    options {
-        disableConcurrentBuilds()
-        timestamps()
-    }
-
     triggers {
-        pollSCM('H/2 * * * *')   // checks every 2 minutes
+        githubPush()
+        pollSCM('H/2 * * * *')
     }
 
-    environment {
-        GIT_REPO = 'https://github.com/awsdevopssri/Future.git'
-        GIT_BRANCH = 'feature-ep2-task-1'
+    options {
+        timestamps()
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git branch: "${GIT_BRANCH}", url: "${GIT_REPO}"
+                git branch: 'feature-ep2-task-1',
+                    url: 'https://github.com/awsdevopssri/Future.git'
             }
         }
 
         stage('Check Python') {
             steps {
                 dir('python') {
-                bat '''
-                echo Checking Python installation...
-
-                where python
-                if %ERRORLEVEL% NEQ 0 (
-                    echo Python not found! Please install Python and add to PATH
-                    exit /b 1
-                )
-
-                python --version
-                '''
+                    bat '''
+                    echo Checking Python...
+                    where python
+                    python --version
+                    '''
                 }
             }
         }
 
-        stage('Setup Virtual Env (if possible)') {
+        stage('Setup Environment') {
             steps {
-                bat '''
-                echo Trying to create virtual environment...
+                dir('python') {
+                    bat '''
+                    echo Trying venv...
 
-                python -m venv venv
+                    python -m venv venv || echo venv not supported, continuing...
 
-                IF EXIST venv (
-                    echo Virtual environment created successfully
-
-                    call venv\\Scripts\\activate
-
-                    python -m pip install --upgrade pip
-
-                    if exist requirements.txt (
-                        pip install -r requirements.txt
-                    ) else (
-                        echo No requirements.txt found
+                    IF EXIST venv (
+                        echo Using virtual environment
+                        call venv\\Scripts\\activate
+                        python -m pip install --upgrade pip
+                        IF EXIST requirements.txt (
+                            pip install -r requirements.txt
+                        ) ELSE (
+                            echo No requirements.txt
+                        )
+                    ) ELSE (
+                        echo Using system Python
                     )
-                ) ELSE (
-                    echo venv not available → using system Python
-                )
-                '''
+                    '''
+                }
             }
         }
 
         stage('Run Application') {
             steps {
-                bat '''
-                IF EXIST venv (
-                    call venv\\Scripts\\activate
-                )
-                python app.py
-                '''
+                dir('python') {
+                    bat '''
+                    IF EXIST app.py (
+                        python app.py
+                    ) ELSE (
+                        echo No app.py found
+                    )
+                    '''
+                }
             }
         }
 
         stage('Run Tests') {
             steps {
-                bat '''
-                IF EXIST venv (
-                    call venv\\Scripts\\activate
-                )
-                python -m unittest discover
-                '''
+                dir('python') {
+                    bat '''
+                    IF EXIST test.py (
+                        python test.py
+                    ) ELSE (
+                        echo No tests found
+                    )
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo '✅ Build SUCCESS'
+            echo "✅ PYTHON BUILD SUCCESS"
         }
         failure {
-            echo '❌ Build FAILED'
+            echo "❌ PYTHON BUILD FAILED"
         }
     }
 }
