@@ -32,7 +32,7 @@ pipeline {
 
         stage('Verify Tools') {
             steps {
-                dir('java') {
+                dir('Java') {
                     bat '''
                     java -version
                     mvn -version
@@ -43,7 +43,7 @@ pipeline {
 
         stage('Build Application') {
             steps {
-                dir('java') {
+                dir('Java') {
                     bat 'mvn clean package'
                 }
             }
@@ -51,7 +51,7 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                dir('java') {
+                dir('Java') {
                     bat 'mvn test'
                     junit allowEmptyResults: true,
                           testResults: 'target/surefire-reports/*.xml'
