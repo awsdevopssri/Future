@@ -61,8 +61,11 @@ pipeline {
 
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'java/target/*.jar',
-                                  fingerprint: true
+                dir('Java') {   // ✅ FIXED
+                    archiveArtifacts artifacts: 'target/*.jar',
+                                      fingerprint: true,
+                                      allowEmptyArchive: true
+                }
             }
         }
     }
