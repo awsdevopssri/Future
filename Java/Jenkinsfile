@@ -53,14 +53,16 @@ pipeline {
             steps {
                 dir('java') {
                     bat 'mvn test'
-                    junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true,
+                          testResults: 'target/surefire-reports/*.xml'
                 }
             }
         }
 
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'java/target/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'java/target/*.jar',
+                                  fingerprint: true
             }
         }
     }
