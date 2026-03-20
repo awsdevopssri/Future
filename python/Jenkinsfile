@@ -15,7 +15,6 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                cleanWs()
                 git branch: 'feature-ep2-task-1',
                     url: 'https://github.com/awsdevopssri/Future.git'
             }
