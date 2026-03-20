@@ -32,10 +32,12 @@ pipeline {
 
         stage('Verify Tools') {
             steps {
+                dir('java') {
                 bat '''
                 java -version
                 mvn -version
                 '''
+                }
             }
         }
 

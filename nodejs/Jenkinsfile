@@ -28,6 +28,7 @@ pipeline {
 
         stage('Check Node.js') {
             steps {
+                dir('nodejs') {
                 bat '''
                 echo Checking Node.js...
                 node --version
@@ -38,6 +39,7 @@ pipeline {
 
                 npm --version
                 '''
+                }
             }
         }
 

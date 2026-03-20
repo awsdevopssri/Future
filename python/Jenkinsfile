@@ -25,6 +25,7 @@ pipeline {
 
         stage('Check Python') {
             steps {
+                dir('python') {
                 bat '''
                 echo Checking Python installation...
 
@@ -36,6 +37,7 @@ pipeline {
 
                 python --version
                 '''
+                }
             }
         }
 
